@@ -1,0 +1,31 @@
+using Kanban.Domain.Activity;
+using Kanban.Domain.Boards;
+using Kanban.Infrastructure.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+
+namespace Kanban.Infrastructure.Persistence;
+
+public sealed class KanbanDbContext(DbContextOptions<KanbanDbContext> options)
+    : IdentityDbContext<ApplicationUser>(options)
+{
+    public DbSet<Board> Boards => Set<Board>();
+    public DbSet<Column> Columns => Set<Column>();
+    public DbSet<Card> Cards => Set<Card>();
+    public DbSet<Comment> Comments => Set<Comment>();
+    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+
+    protected override void OnModelCreating(ModelBuilder builder)
+    {
+        base.OnModelCreating(builder);
+        builder.ApplyConfigurationsFromAssembly(typeof(KanbanDbContext).Assembly);
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // Enums como texto: la base de datos es legible y reordenar el enum no corrompe datos.
+        configurationBuilder.Properties<Priority>().HaveConversion<string>().HaveMaxLength(16);
+        configurationBuilder.Properties<ActivitySource>().HaveConversion<string>().HaveMaxLength(16);
+        configurationBuilder.Properties<ActivityAction>().HaveConversion<string>().HaveMaxLength(32);
+    }
+}
