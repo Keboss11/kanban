@@ -24,7 +24,7 @@
 
     <div class="card-actions">
         <button class="btn btn-ghost btn-icon move-toggle" title="Mover a…" aria-label="@($"Mover {Card.Title}")"
-                aria-expanded="@_menuOpen" @onclick="() => _menuOpen = !_menuOpen">⇄</button>
+                aria-expanded="@(_menuOpen ? "true" : "false")" @onclick="() => _menuOpen = !_menuOpen">⇄</button>
     </div>
 
     @if (_menuOpen)

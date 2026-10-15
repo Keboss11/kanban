@@ -1,0 +1,63 @@
+@inject KanbanApiClient Api
+
+<aside class="activity-panel" aria-label="Historial del tablero">
+    <header class="row">
+        <h2>Actividad</h2>
+        <span class="spacer"></span>
+        <button class="btn btn-ghost btn-icon" aria-label="Cerrar historial" @onclick="OnClose">✕</button>
+    </header>
+
+    @if (_items is null)
+    {
+        <p class="muted small">Cargando…</p>
+    }
+    else if (_items.Count == 0)
+    {
+        <p class="muted small">Sin actividad todavía.</p>
+    }
+    else
+    {
+        <ol class="activity-list">
+            @foreach (var item in _items)
+            {
+                <li class="activity @(item.Source == ActivitySourceDto.Ai ? "activity-ai" : "")" @key="item.Id">
+                    <span>
+                        @if (item.Source == ActivitySourceDto.Ai)
+                        {
+                            <strong>🤖 Claude</strong>
+                        }
+                        else
+                        {
+                            <strong>@item.UserName</strong>
+                        }
+                        @* Razor descarta el espacio entre elementos; se añade explícitamente. *@
+                        @($" {item.Summary}")
+                    </span>
+                    <span class="muted small" title="@item.CreatedAt.ToLocalTime().ToString("g")">@Format.Relative(item.CreatedAt)</span>
+                </li>
+            }
+        </ol>
+    }
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public Guid BoardId { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private List<ActivityDto>? _items;
+
+    protected override Task OnParametersSetAsync() => RefreshAsync();
+
+    public async Task RefreshAsync()
+    {
+        try
+        {
+            _items = await Api.GetActivityAsync(BoardId);
+        }
+        catch (ApiException)
+        {
+            _items ??= [];
+        }
+        StateHasChanged();
+    }
+}
