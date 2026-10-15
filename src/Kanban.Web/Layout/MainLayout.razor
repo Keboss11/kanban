@@ -1,4 +1,6 @@
 ﻿@inherits LayoutComponentBase
+@inject AuthService Auth
+@inject NavigationManager Nav
 
 <div class="app-shell">
     <header class="topbar">
@@ -7,9 +9,25 @@
             Kanban
         </a>
         <span class="spacer"></span>
+        <AuthorizeView>
+            <Authorized>
+                <span class="user-email" title="@context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value">
+                    @context.User.Identity?.Name
+                </span>
+                <button class="btn btn-ghost" @onclick="LogoutAsync">Salir</button>
+            </Authorized>
+        </AuthorizeView>
     </header>
 
     <main class="page-content">
         @Body
     </main>
 </div>
+
+@code {
+    private async Task LogoutAsync()
+    {
+        await Auth.LogoutAsync();
+        Nav.NavigateTo("login");
+    }
+}

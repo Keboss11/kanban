@@ -1,0 +1,59 @@
+@page "/register"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Crear cuenta · Kanban</PageTitle>
+
+<div class="auth-card panel">
+    <h1>Crear cuenta</h1>
+
+    <form class="stack" @onsubmit="SubmitAsync">
+        <label class="field">
+            Email
+            <input class="input" type="email" autocomplete="username" required @bind="_email" />
+        </label>
+        <label class="field">
+            Contraseña
+            <input class="input" type="password" autocomplete="new-password" required @bind="_password" />
+            <span class="muted small">Mínimo 6 caracteres, con mayúscula, minúscula, número y símbolo.</span>
+        </label>
+
+        @if (_error is not null)
+        {
+            <div class="alert" role="alert">@_error</div>
+        }
+
+        <button class="btn btn-primary" type="submit" disabled="@_busy">Crear cuenta</button>
+    </form>
+
+    <p class="muted small">¿Ya tienes cuenta? <a href="login">Entra</a></p>
+</div>
+
+@code {
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            _error = await Auth.RegisterAsync(_email, _password);
+            if (_error is null)
+                Nav.NavigateTo(Login.SafeReturnUrl(ReturnUrl));
+        }
+        catch (HttpRequestException)
+        {
+            _error = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

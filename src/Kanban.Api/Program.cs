@@ -22,7 +22,8 @@ builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(allowedOrigi
 
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(o => o.User.RequireUniqueEmail = true)
-    .AddEntityFrameworkStores<KanbanDbContext>();
+    .AddEntityFrameworkStores<KanbanDbContext>()
+    .AddErrorDescriber<SpanishIdentityErrorDescriber>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 

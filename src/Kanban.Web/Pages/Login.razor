@@ -1,0 +1,75 @@
+@page "/login"
+@inject AuthService Auth
+@inject NavigationManager Nav
+
+<PageTitle>Entrar · Kanban</PageTitle>
+
+<div class="auth-card panel">
+    <h1>Entrar</h1>
+
+    <form class="stack" @onsubmit="SubmitAsync">
+        <label class="field">
+            Email
+            <input class="input" type="email" autocomplete="username" required @bind="_email" />
+        </label>
+        <label class="field">
+            Contraseña
+            <input class="input" type="password" autocomplete="current-password" required @bind="_password" />
+        </label>
+
+        @if (_error is not null)
+        {
+            <div class="alert" role="alert">@_error</div>
+        }
+
+        <button class="btn btn-primary" type="submit" disabled="@_busy">Entrar</button>
+        <button class="btn" type="button" disabled="@_busy" @onclick="DemoAsync">Probar con la cuenta demo</button>
+    </form>
+
+    <p class="muted small">¿No tienes cuenta? <a href="@($"register{ReturnQuery}")">Regístrate</a></p>
+</div>
+
+@code {
+    public const string DemoEmail = "demo@kanban.local";
+    public const string DemoPassword = "Demo1234!";
+
+    [SupplyParameterFromQuery] public string? ReturnUrl { get; set; }
+
+    private string _email = "";
+    private string _password = "";
+    private string? _error;
+    private bool _busy;
+
+    private string ReturnQuery => string.IsNullOrEmpty(ReturnUrl) ? "" : $"?returnUrl={Uri.EscapeDataString(ReturnUrl)}";
+
+    private Task DemoAsync()
+    {
+        _email = DemoEmail;
+        _password = DemoPassword;
+        return SubmitAsync();
+    }
+
+    private async Task SubmitAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            _error = await Auth.LoginAsync(_email, _password);
+            if (_error is null)
+                Nav.NavigateTo(SafeReturnUrl(ReturnUrl));
+        }
+        catch (HttpRequestException)
+        {
+            _error = "No se pudo conectar con el servidor.";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    /// <summary>Solo rutas relativas de la propia app, para evitar redirecciones abiertas.</summary>
+    internal static string SafeReturnUrl(string? url) =>
+        !string.IsNullOrEmpty(url) && !url.Contains("://") && !url.StartsWith("//") ? url : "";
+}
