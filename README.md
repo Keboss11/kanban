@@ -2,7 +2,7 @@
 
 Tablero Kanban con tiempo real y un servidor **MCP** integrado, para que Claude pueda crear, mover y comentar tarjetas pasando por las mismas reglas que un usuario.
 
-> 🚧 En construcción. Fase actual: **F0 – Base**.
+> 🚧 En construcción. Fase actual: **F2 – API REST + autenticación**.
 
 ## Stack
 
@@ -35,10 +35,20 @@ dotnet run --project src/Kanban.Api
 dotnet run --project src/Kanban.Web
 ```
 
+En desarrollo la API crea `kanban.db` (SQLite), aplica las migraciones y siembra un usuario demo:
+`demo@kanban.local` / `Demo1234!`.
+
+Nueva migración:
+
+```bash
+dotnet tool restore
+dotnet ef migrations add <Nombre> -p src/Kanban.Infrastructure -s src/Kanban.Infrastructure -o Persistence/Migrations
+```
+
 ## Hoja de ruta
 
 - [x] F0 – Base: repositorio, solución, CI
-- [ ] F1 – Dominio + base de datos
+- [x] F1 – Dominio + base de datos
 - [ ] F2 – API REST + autenticación
 - [ ] F3 – Interfaz Blazor
 - [ ] F4 – Tiempo real (SignalR)
