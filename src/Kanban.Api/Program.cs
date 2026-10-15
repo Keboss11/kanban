@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
 using Kanban.Api.Auth;
+using Kanban.Api.Endpoints;
 using Kanban.Api.Errors;
 using Kanban.Api.Services;
 using Kanban.Infrastructure;
@@ -43,6 +44,8 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
+app.MapBoardEndpoints();
+app.MapCardEndpoints();
 
 app.Run();
 
