@@ -15,6 +15,8 @@ public sealed class KanbanExceptionHandler(IProblemDetailsService problemDetails
         {
             EntityNotFoundException => (StatusCodes.Status404NotFound, "No encontrado"),
             DomainException => (StatusCodes.Status400BadRequest, "Petición no válida"),
+            // JSON mal formado o cuerpo ausente. En Development se lanza como excepción en vez de responder 400.
+            BadHttpRequestException bad => (bad.StatusCode, "Petición no válida"),
             _ => (0, null),
         };
         if (status == 0)
