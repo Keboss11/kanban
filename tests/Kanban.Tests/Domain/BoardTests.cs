@@ -170,7 +170,7 @@ public class BoardTests
     public void Operations_on_foreign_ids_fail()
     {
         var board = NewBoard();
-        Assert.Throws<DomainException>(() => board.GetCard(Guid.NewGuid()));
-        Assert.Throws<DomainException>(() => board.AddCard(Guid.NewGuid(), "A"));
+        Assert.Throws<EntityNotFoundException>(() => board.GetCard(Guid.NewGuid()));
+        Assert.Throws<EntityNotFoundException>(() => board.AddCard(Guid.NewGuid(), "A"));
     }
 }
