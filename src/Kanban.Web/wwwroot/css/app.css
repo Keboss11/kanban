@@ -207,3 +207,33 @@ label.field { display: flex; flex-direction: column; gap: .3rem; font-weight: 50
     .page-content { padding: .75rem; }
     .column { flex-basis: 85vw; }
 }
+
+/* ---- Modal ---- */
+.modal-backdrop {
+    position: fixed; inset: 0; z-index: 50; display: flex; align-items: flex-start; justify-content: center;
+    padding: 6vh 1rem 1rem; background: rgb(10 12 20 / 55%); overflow-y: auto;
+}
+.modal {
+    width: 100%; max-width: 640px; display: flex; flex-direction: column; gap: .9rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    box-shadow: var(--shadow-lg); padding: 1rem 1.2rem 1.2rem; outline: none;
+}
+.modal-header { display: flex; align-items: center; gap: .5rem; margin: -.3rem -.4rem 0 0; }
+.modal-title { font-size: 1.3rem; margin: 0; overflow-wrap: anywhere; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.markdown { overflow-wrap: anywhere; }
+.markdown > :first-child { margin-top: 0; }
+.markdown > :last-child { margin-bottom: 0; }
+.markdown pre { background: var(--surface-2); padding: .6rem; border-radius: 6px; overflow-x: auto; }
+.markdown code { background: var(--surface-2); padding: .05rem .3rem; border-radius: 4px; font-size: .9em; }
+.comments { border-top: 1px solid var(--border); padding-top: .9rem; display: flex; flex-direction: column; gap: .7rem; }
+.comments h3 { font-size: 1rem; margin: 0; }
+.comments textarea.input { min-height: 3.5rem; }
+.comment { background: var(--surface-2); border-radius: 8px; padding: .55rem .7rem; }
+.comment-head { display: flex; gap: .5rem; align-items: baseline; margin-bottom: .2rem; }
+
+@media (max-width: 600px) {
+    .modal-backdrop { padding: 0; }
+    .modal { min-height: 100dvh; border-radius: 0; max-width: none; }
+    .form-grid { grid-template-columns: 1fr; }
+}

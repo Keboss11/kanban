@@ -1,0 +1,230 @@
+@using Kanban.Web.Models
+@inject KanbanApiClient Api
+@inject IJSRuntime Js
+
+<div class="modal-backdrop" @onclick="CloseAsync">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="card-modal-title"
+         @onclick:stopPropagation="true" @onkeydown="OnKeyDown" tabindex="-1" @ref="_dialog">
+
+        <header class="modal-header">
+            <span class="muted small">en <strong>@ColumnName</strong></span>
+            <span class="spacer"></span>
+            <button class="btn btn-ghost btn-icon" aria-label="Cerrar" @onclick="CloseAsync">✕</button>
+        </header>
+
+        @if (_editing)
+        {
+            <form class="stack" @onsubmit="SaveAsync">
+                <label class="field">
+                    Título
+                    <input class="input" @bind="_title" maxlength="200" required />
+                </label>
+                <label class="field">
+                    Descripción <span class="muted small">(Markdown)</span>
+                    <textarea class="input" rows="7" @bind="_description" maxlength="10000"></textarea>
+                </label>
+                <div class="form-grid">
+                    <label class="field">
+                        Prioridad
+                        <select class="input" @bind="_priority">
+                            @foreach (var p in Enum.GetValues<CardPriority>())
+                            {
+                                <option value="@p">@Labels.Priority(p)</option>
+                            }
+                        </select>
+                    </label>
+                    <label class="field">
+                        Fecha límite
+                        <input class="input" type="date" @bind="_dueDate" />
+                    </label>
+                </div>
+                <label class="field">
+                    Etiquetas <span class="muted small">(separadas por comas)</span>
+                    <input class="input" @bind="_labels" placeholder="backend, bug" />
+                </label>
+                <div class="row">
+                    <button class="btn btn-primary" type="submit" disabled="@_busy">Guardar</button>
+                    <button class="btn btn-ghost" type="button" @onclick="() => _editing = false">Cancelar</button>
+                </div>
+            </form>
+        }
+        else
+        {
+            <h2 id="card-modal-title" class="modal-title">@Card.Title</h2>
+            <div class="card-meta">
+                <span class="chip chip-prio">Prioridad: @Labels.Priority(Card.Priority)</span>
+                @foreach (var label in Card.Labels)
+                {
+                    <span class="chip">@label</span>
+                }
+                @if (Card.DueDate is { } due)
+                {
+                    <span class="chip @(due < DateOnly.FromDateTime(DateTime.Now) ? "chip-overdue" : "")">📅 @due.ToString("d MMM yyyy")</span>
+                }
+            </div>
+
+            @if (string.IsNullOrWhiteSpace(Card.Description))
+            {
+                <p class="muted">Sin descripción.</p>
+            }
+            else
+            {
+                <div class="markdown">@MarkdownRenderer.Render(Card.Description)</div>
+            }
+
+            <div class="row">
+                <button class="btn" @onclick="StartEdit">✎ Editar</button>
+                <span class="spacer"></span>
+                <button class="btn btn-ghost btn-danger" @onclick="DeleteAsync" disabled="@_busy">Borrar</button>
+            </div>
+        }
+
+        @if (_error is not null)
+        {
+            <div class="alert" role="alert">@_error</div>
+        }
+
+        <section class="comments" aria-label="Comentarios">
+            <h3>Comentarios</h3>
+            @if (_comments is null)
+            {
+                <p class="muted small">Cargando…</p>
+            }
+            else
+            {
+                @foreach (var comment in _comments)
+                {
+                    <div class="comment" @key="comment.Id">
+                        <div class="comment-head">
+                            <strong>@comment.AuthorName</strong>
+                            <span class="muted small" title="@comment.CreatedAt.ToLocalTime().ToString("g")">@Format.Relative(comment.CreatedAt)</span>
+                        </div>
+                        <div class="markdown">@MarkdownRenderer.Render(comment.Text)</div>
+                    </div>
+                }
+                <form class="stack" @onsubmit="AddCommentAsync">
+                    <textarea class="input" rows="2" @bind="_newComment" @bind:event="oninput" maxlength="5000"
+                              placeholder="Escribe un comentario…" aria-label="Nuevo comentario"></textarea>
+                    <div>
+                        <button class="btn" type="submit" disabled="@(_busy || string.IsNullOrWhiteSpace(_newComment))">Comentar</button>
+                    </div>
+                </form>
+            }
+        </section>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Guid BoardId { get; set; }
+    [Parameter, EditorRequired] public CardDto Card { get; set; } = null!;
+    [Parameter, EditorRequired] public string ColumnName { get; set; } = "";
+    [Parameter] public EventCallback<CardDto> OnSaved { get; set; }
+    [Parameter] public EventCallback<Guid> OnDeleted { get; set; }
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private ElementReference _dialog;
+    private List<CommentDto>? _comments;
+    private bool _editing;
+    private bool _busy;
+    private string? _error;
+
+    private string _title = "";
+    private string? _description;
+    private CardPriority _priority;
+    private DateOnly? _dueDate;
+    private string _labels = "";
+    private string _newComment = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _comments = await Api.GetCommentsAsync(BoardId, Card.Id);
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+            _comments = [];
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+            await _dialog.FocusAsync();
+    }
+
+    private void StartEdit()
+    {
+        _title = Card.Title;
+        _description = Card.Description;
+        _priority = Card.Priority;
+        _dueDate = Card.DueDate;
+        _labels = string.Join(", ", Card.Labels);
+        _editing = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        await RunAsync(async () =>
+        {
+            var labels = _labels.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var updated = await Api.UpdateCardAsync(BoardId, Card.Id, new UpdateCardRequest(_title, _description, _priority, labels, _dueDate));
+            _editing = false;
+            await OnSaved.InvokeAsync(updated);
+        });
+    }
+
+    private async Task DeleteAsync()
+    {
+        if (!await Js.InvokeAsync<bool>("confirm", $"¿Borrar la tarjeta «{Card.Title}»?"))
+            return;
+        await RunAsync(async () =>
+        {
+            await Api.DeleteCardAsync(BoardId, Card.Id);
+            await OnDeleted.InvokeAsync(Card.Id);
+        });
+    }
+
+    private async Task AddCommentAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_newComment))
+            return;
+        await RunAsync(async () =>
+        {
+            _comments!.Add(await Api.AddCommentAsync(BoardId, Card.Id, _newComment));
+            _newComment = "";
+        });
+    }
+
+    private async Task RunAsync(Func<Task> action)
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            await action();
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private Task CloseAsync() => OnClose.InvokeAsync();
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+        {
+            if (_editing)
+                _editing = false;
+            else
+                await CloseAsync();
+        }
+    }
+}

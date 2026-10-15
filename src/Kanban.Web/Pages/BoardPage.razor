@@ -63,6 +63,12 @@ else
             }
         </section>
     </div>
+
+    @if (_openCard is not null && _board.ColumnOf(_openCard.Id) is { } openColumn)
+    {
+        <CardModal @key="_openCard.Id" BoardId="_board.Id" Card="_openCard" ColumnName="@openColumn.Name"
+                   OnSaved="CardSaved" OnDeleted="CardDeleted" OnClose="() => _openCard = null" />
+    }
 }
 
 @code {
@@ -120,6 +126,18 @@ else
     }
 
     private void OpenCard(CardDto card) => _openCard = card;
+
+    private void CardSaved(CardDto card)
+    {
+        _board!.ReplaceCard(card);
+        _openCard = card;
+    }
+
+    private void CardDeleted(Guid cardId)
+    {
+        _board!.RemoveCard(cardId);
+        _openCard = null;
+    }
 
     private Task MoveCardAsync((Guid CardId, Guid ColumnId, int Index) move) => RunAsync(async () =>
     {
