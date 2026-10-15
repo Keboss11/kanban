@@ -16,6 +16,10 @@ builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Ad
 
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// La web (Blazor WASM) se sirve desde otro origen; sin cookies, así que no hace falta AllowCredentials.
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
+
 builder.Services.AddAuthorization();
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(o => o.User.RequireUniqueEmail = true)
     .AddEntityFrameworkStores<KanbanDbContext>();
@@ -39,6 +43,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
