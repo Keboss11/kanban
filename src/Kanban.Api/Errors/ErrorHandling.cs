@@ -3,18 +3,18 @@ using Microsoft.AspNetCore.Diagnostics;
 
 namespace Kanban.Api.Errors;
 
-/// <summary>Recurso inexistente o ajeno: se responde 404 en ambos casos para no revelar que existe.</summary>
-public sealed class NotFoundException(string message) : Exception(message);
-
-/// <summary>Traduce las excepciones de negocio a ProblemDetails (400 / 404).</summary>
+/// <summary>
+/// Traduce las excepciones de negocio a ProblemDetails. Un recurso ajeno responde 404
+/// igual que uno inexistente, para no revelar que existe.
+/// </summary>
 public sealed class KanbanExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext context, Exception exception, CancellationToken ct)
     {
         var (status, title) = exception switch
         {
+            EntityNotFoundException => (StatusCodes.Status404NotFound, "No encontrado"),
             DomainException => (StatusCodes.Status400BadRequest, "Petición no válida"),
-            NotFoundException => (StatusCodes.Status404NotFound, "No encontrado"),
             _ => (0, null),
         };
         if (status == 0)

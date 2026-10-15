@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 using Kanban.Api.Auth;
 using Kanban.Api.Errors;
+using Kanban.Api.Services;
 using Kanban.Infrastructure;
 using Kanban.Infrastructure.Identity;
 using Kanban.Infrastructure.Persistence;
@@ -19,6 +20,10 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>(o => o.User.RequireUni
     .AddEntityFrameworkStores<KanbanDbContext>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+
+builder.Services.AddScoped<BoardAccess>();
+builder.Services.AddScoped<BoardService>();
+builder.Services.AddScoped<CardService>();
 
 var app = builder.Build();
 

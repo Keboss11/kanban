@@ -65,7 +65,7 @@ public sealed class Board
 
     public Column GetColumn(Guid columnId) =>
         _columns.FirstOrDefault(c => c.Id == columnId)
-        ?? throw new DomainException("La columna no existe en este tablero.");
+        ?? throw new EntityNotFoundException("La columna no existe en este tablero.");
 
     public void MoveColumn(Guid columnId, int targetIndex)
     {
@@ -131,6 +131,6 @@ public sealed class Board
             if (card is not null)
                 return (column, card);
         }
-        throw new DomainException("La tarjeta no existe en este tablero.");
+        throw new EntityNotFoundException("La tarjeta no existe en este tablero.");
     }
 }
