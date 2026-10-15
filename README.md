@@ -2,7 +2,7 @@
 
 Tablero Kanban con tiempo real y un servidor **MCP** integrado, para que Claude pueda crear, mover y comentar tarjetas pasando por las mismas reglas que un usuario.
 
-> 🚧 En construcción. Fase actual: **F4 – Tiempo real (SignalR)**.
+> 🚧 En construcción. Fase actual: **F5 – Servidor MCP**.
 
 ## Stack
 
@@ -77,13 +77,23 @@ Blazor WebAssembly con CSS propio (modo claro/oscuro, responsive) en lugar de un
 - Modal de tarjeta con descripción en Markdown (sin HTML y solo enlaces seguros) y comentarios.
 - Historial del tablero: los cambios hechos por IA aparecen como «🤖 Claude …».
 
+## Tiempo real
+
+Hub de SignalR en `/hubs/board` con **un grupo por tablero** (solo el propietario puede unirse).
+Los servicios de la API emiten `BoardChanged` al guardar, con el mismo resumen que el historial,
+así que cualquier cambio, venga de la web o de Claude vía MCP, aparece al momento en todas las pestañas abiertas.
+
+- El token viaja en `?access_token=` porque los WebSockets del navegador no admiten cabeceras.
+- Cada petición de la web incluye `X-SignalR-Connection`; esa pestaña no recibe el eco de su propio cambio.
+- Al reconectar, el cliente vuelve a unirse al grupo y recarga el tablero.
+
 ## Hoja de ruta
 
 - [x] F0 – Base: repositorio, solución, CI
 - [x] F1 – Dominio + base de datos
 - [x] F2 – API REST + autenticación
 - [x] F3 – Interfaz Blazor
-- [ ] F4 – Tiempo real (SignalR)
+- [x] F4 – Tiempo real (SignalR)
 - [ ] F5 – Servidor MCP
 - [ ] F6 – Despliegue
 - [ ] F7 – PWA + móvil
