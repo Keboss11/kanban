@@ -125,3 +125,21 @@ label.field { display: flex; flex-direction: column; gap: .3rem; font-weight: 50
 .loading-progress circle:last-child { stroke: var(--accent); stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%; transition: stroke-dasharray .05s ease-in-out; }
 .loading-progress-text { position: absolute; text-align: center; font-weight: bold; inset: calc(20vh + 3.25rem) 0 auto .2rem; color: var(--text-muted); }
 .loading-progress-text:after { content: var(--blazor-load-percentage-text, "Cargando"); }
+
+/* ---- Lista de tableros ---- */
+.page-header { margin-bottom: 1rem; }
+.page-header h1 { margin: 0; }
+.new-board { max-width: 480px; margin-bottom: 1rem; }
+.empty { max-width: 480px; }
+.board-grid { list-style: none; padding: 0; margin: 0; display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.board-tile { position: relative; }
+.board-link {
+    display: flex; flex-direction: column; gap: .3rem; min-height: 110px; padding: 1rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); color: var(--text); text-decoration: none;
+    border-top: 4px solid var(--accent);
+}
+.board-link:hover { border-color: var(--accent); }
+.board-link strong { padding-right: 2rem; }
+.tile-delete { position: absolute; top: .55rem; right: .4rem; }
+.clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

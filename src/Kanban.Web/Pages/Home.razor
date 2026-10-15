@@ -1,7 +1,125 @@
 ﻿@page "/"
 @attribute [Authorize]
+@inject KanbanApiClient Api
 
-<PageTitle>Kanban</PageTitle>
+<PageTitle>Mis tableros · Kanban</PageTitle>
 
-<h1>Mis tableros</h1>
-<p class="muted">Próximamente.</p>
+<div class="row page-header">
+    <h1>Mis tableros</h1>
+    <span class="spacer"></span>
+    <button class="btn btn-primary" @onclick="() => _creating = !_creating">+ Nuevo tablero</button>
+</div>
+
+@if (_creating)
+{
+    <form class="panel stack new-board" @onsubmit="CreateAsync">
+        <label class="field">
+            Nombre
+            <input class="input" @bind="_name" maxlength="100" required autofocus />
+        </label>
+        <label class="field">
+            Descripción <span class="muted small">(opcional)</span>
+            <input class="input" @bind="_description" maxlength="2000" />
+        </label>
+        <div class="row">
+            <button class="btn btn-primary" type="submit" disabled="@_busy">Crear</button>
+            <button class="btn btn-ghost" type="button" @onclick="() => _creating = false">Cancelar</button>
+        </div>
+    </form>
+}
+
+@if (_error is not null)
+{
+    <div class="alert" role="alert">@_error</div>
+}
+
+@if (_boards is null)
+{
+    <p class="muted">Cargando tableros…</p>
+}
+else if (_boards.Count == 0)
+{
+    <div class="panel empty">
+        <p>Todavía no tienes tableros.</p>
+        <p class="muted small">Crea uno con «Nuevo tablero». Tendrá las columnas Por hacer, En curso y Hecho.</p>
+    </div>
+}
+else
+{
+    <ul class="board-grid">
+        @foreach (var board in _boards)
+        {
+            <li class="board-tile" @key="board.Id">
+                <a href="@($"boards/{board.Id}")" class="board-link">
+                    <strong>@board.Name</strong>
+                    @if (!string.IsNullOrEmpty(board.Description))
+                    {
+                        <span class="muted small clamp-2">@board.Description</span>
+                    }
+                    <span class="muted small">@board.CardCount @(board.CardCount == 1 ? "tarjeta" : "tarjetas")</span>
+                </a>
+                <button class="btn btn-ghost btn-icon btn-danger tile-delete" title="Borrar tablero"
+                        aria-label="@($"Borrar {board.Name}")" @onclick="() => DeleteAsync(board)">🗑</button>
+            </li>
+        }
+    </ul>
+}
+
+@code {
+    private List<BoardSummaryDto>? _boards;
+    private bool _creating;
+    private bool _busy;
+    private string _name = "";
+    private string _description = "";
+    private string? _error;
+
+    [Inject] private NavigationManager Nav { get; set; } = null!;
+    [Inject] private IJSRuntime Js { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _boards = await Api.GetBoardsAsync();
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+            _boards = [];
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        _error = null;
+        try
+        {
+            var board = await Api.CreateBoardAsync(new CreateBoardRequest(_name, _description));
+            Nav.NavigateTo($"boards/{board.Id}");
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task DeleteAsync(BoardSummaryDto board)
+    {
+        if (!await Js.InvokeAsync<bool>("confirm", $"¿Borrar el tablero «{board.Name}» y todas sus tarjetas?"))
+            return;
+        try
+        {
+            await Api.DeleteBoardAsync(board.Id);
+            _boards!.Remove(board);
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+        }
+    }
+}

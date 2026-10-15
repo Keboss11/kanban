@@ -16,6 +16,7 @@ builder.Services.AddSingleton<TokenStore>();
 builder.Services.AddSingleton<AuthService>();
 builder.Services.AddScoped<AuthenticationStateProvider, KanbanAuthStateProvider>();
 builder.Services.AddTransient<AuthHeaderHandler>();
+builder.Services.AddScoped<KanbanApiClient>();
 
 builder.Services.AddHttpClient(HttpClients.Auth, c => c.BaseAddress = apiBase);
 builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = apiBase)
