@@ -1,0 +1,125 @@
+@using Kanban.Web.Models
+
+<section class="column @(Column.IsAtWipLimit ? "at-limit" : "")" aria-label="@Column.Name">
+    <header class="column-header">
+        @if (_editing)
+        {
+            <form class="stack column-edit" @onsubmit="SaveAsync">
+                <input class="input" @bind="_name" maxlength="50" required aria-label="Nombre de la columna" @ref="_nameInput" />
+                <label class="field small">
+                    Límite WIP (vacío = sin límite)
+                    <input class="input" type="number" min="1" @bind="_wip" />
+                </label>
+                <div class="row">
+                    <button class="btn btn-primary" type="submit">Guardar</button>
+                    <button class="btn btn-ghost" type="button" @onclick="() => _editing = false">Cancelar</button>
+                    <span class="spacer"></span>
+                    <button class="btn btn-ghost btn-danger" type="button" title="Borrar columna"
+                            disabled="@(Column.Cards.Count > 0)" @onclick="() => OnDelete.InvokeAsync(Column)">🗑</button>
+                </div>
+            </form>
+        }
+        else
+        {
+            <h2>@Column.Name</h2>
+            <span class="count @(Column.IsAtWipLimit ? "count-full" : "")"
+                  title="@(Column.WipLimit is null ? "Tarjetas" : "Tarjetas / límite WIP")">
+                @Column.Cards.Count@(Column.WipLimit is { } l ? $"/{l}" : "")
+            </span>
+            <span class="spacer"></span>
+            <button class="btn btn-ghost btn-icon" title="Editar columna" aria-label="@($"Editar columna {Column.Name}")" @onclick="StartEdit">⋯</button>
+        }
+    </header>
+
+    <div class="card-list" data-column-id="@Column.Id">
+        @for (var i = 0; i < Column.Cards.Count; i++)
+        {
+            var card = Column.Cards[i];
+            <CardItem @key="card.Id" Card="card" ColumnId="Column.Id" Index="i" ColumnCount="Column.Cards.Count"
+                      Columns="Columns" OnOpen="OnOpenCard" OnMove="OnMoveCard" />
+        }
+    </div>
+
+    @if (_adding)
+    {
+        <form class="stack add-card" @onsubmit="AddAsync">
+            <input class="input" @bind="_title" @bind:event="oninput" maxlength="200" placeholder="Título de la tarjeta"
+                   aria-label="Título de la nueva tarjeta" @onkeydown="OnTitleKey" @ref="_titleInput" />
+            <div class="row">
+                <button class="btn btn-primary" type="submit">Añadir</button>
+                <button class="btn btn-ghost" type="button" @onclick="() => _adding = false">Cancelar</button>
+            </div>
+        </form>
+    }
+    else
+    {
+        <button class="btn btn-ghost add-card-toggle" disabled="@Column.IsAtWipLimit" @onclick="StartAdding">
+            @(Column.IsAtWipLimit ? "Límite WIP alcanzado" : "+ Añadir tarjeta")
+        </button>
+    }
+</section>
+
+@code {
+    [Parameter, EditorRequired] public ColumnState Column { get; set; } = null!;
+    [Parameter, EditorRequired] public IReadOnlyList<ColumnState> Columns { get; set; } = [];
+    [Parameter] public EventCallback<CardDto> OnOpenCard { get; set; }
+    [Parameter] public EventCallback<(Guid CardId, Guid ColumnId, int Index)> OnMoveCard { get; set; }
+    [Parameter] public EventCallback<(Guid ColumnId, string Title)> OnAddCard { get; set; }
+    [Parameter] public EventCallback<(ColumnState Column, string Name, int? WipLimit)> OnUpdate { get; set; }
+    [Parameter] public EventCallback<ColumnState> OnDelete { get; set; }
+
+    private bool _adding;
+    private string _title = "";
+    private ElementReference _titleInput;
+    private ElementReference _nameInput;
+    private bool _focusPending;
+    private bool _editing;
+    private string _name = "";
+    private int? _wip;
+
+    private void StartEdit()
+    {
+        _name = Column.Name;
+        _wip = Column.WipLimit;
+        _editing = true;
+        _focusPending = true;
+    }
+
+    private void StartAdding()
+    {
+        _adding = true;
+        _focusPending = true;
+    }
+
+    // autofocus no funciona en elementos que Blazor inserta después de cargar la página.
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusPending)
+            return;
+        _focusPending = false;
+        await (_editing ? _nameInput : _titleInput).FocusAsync();
+    }
+
+    private async Task SaveAsync()
+    {
+        _editing = false;
+        await OnUpdate.InvokeAsync((Column, _name, _wip));
+    }
+
+    private async Task AddAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_title))
+            return;
+        var title = _title;
+        _title = "";
+        await OnAddCard.InvokeAsync((Column.Id, title));
+        _focusPending = true;
+    }
+
+    /// <summary>Enter envía el formulario (y lo deja abierto para la siguiente); Escape lo cierra.</summary>
+    private void OnTitleKey(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape")
+            _adding = false;
+    }
+}

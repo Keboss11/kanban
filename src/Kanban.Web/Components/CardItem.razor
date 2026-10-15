@@ -1,0 +1,74 @@
+@* Tarjeta en una columna. El menú «Mover…» es la alternativa al arrastre (teclado, lectores de pantalla, móviles). *@
+
+<article class="card prio-@Card.Priority.ToString().ToLowerInvariant()" data-card-id="@Card.Id">
+    <button class="card-open" @onclick="() => OnOpen.InvokeAsync(Card)" aria-label="@($"Abrir {Card.Title}")">
+        <span class="card-title">@Card.Title</span>
+        @if (Card.Labels.Count > 0 || Card.DueDate is not null || Card.Priority != CardPriority.Medium)
+        {
+            <span class="card-meta">
+                @if (Card.Priority != CardPriority.Medium)
+                {
+                    <span class="chip chip-prio">@Labels.Priority(Card.Priority)</span>
+                }
+                @foreach (var label in Card.Labels)
+                {
+                    <span class="chip">@label</span>
+                }
+                @if (Card.DueDate is { } due)
+                {
+                    <span class="chip @(due < Today ? "chip-overdue" : "")" title="Fecha límite">📅 @due.ToString("d MMM")</span>
+                }
+            </span>
+        }
+    </button>
+
+    <div class="card-actions">
+        <button class="btn btn-ghost btn-icon move-toggle" title="Mover a…" aria-label="@($"Mover {Card.Title}")"
+                aria-expanded="@_menuOpen" @onclick="() => _menuOpen = !_menuOpen">⇄</button>
+    </div>
+
+    @if (_menuOpen)
+    {
+        <div class="move-menu" role="menu">
+            <span class="muted small">Mover a…</span>
+            @foreach (var column in Columns)
+            {
+                @if (column.Id != ColumnId)
+                {
+                    <button role="menuitem" class="btn btn-ghost" disabled="@column.IsAtWipLimit"
+                            @onclick="() => MoveAsync(column.Id, column.Cards.Count)">
+                        @column.Name @(column.IsAtWipLimit ? "(lleno)" : "")
+                    </button>
+                }
+            }
+            @if (Index > 0)
+            {
+                <button role="menuitem" class="btn btn-ghost" @onclick="() => MoveAsync(ColumnId, Index - 1)">↑ Subir</button>
+            }
+            @if (Index < ColumnCount - 1)
+            {
+                <button role="menuitem" class="btn btn-ghost" @onclick="() => MoveAsync(ColumnId, Index + 1)">↓ Bajar</button>
+            }
+        </div>
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public CardDto Card { get; set; } = null!;
+    [Parameter, EditorRequired] public Guid ColumnId { get; set; }
+    [Parameter, EditorRequired] public int Index { get; set; }
+    [Parameter, EditorRequired] public int ColumnCount { get; set; }
+    [Parameter, EditorRequired] public IReadOnlyList<Kanban.Web.Models.ColumnState> Columns { get; set; } = [];
+    [Parameter] public EventCallback<CardDto> OnOpen { get; set; }
+    [Parameter] public EventCallback<(Guid CardId, Guid ColumnId, int Index)> OnMove { get; set; }
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Now);
+
+    private bool _menuOpen;
+
+    private async Task MoveAsync(Guid columnId, int index)
+    {
+        _menuOpen = false;
+        await OnMove.InvokeAsync((Card.Id, columnId, index));
+    }
+}

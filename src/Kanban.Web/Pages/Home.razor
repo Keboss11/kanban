@@ -7,7 +7,7 @@
 <div class="row page-header">
     <h1>Mis tableros</h1>
     <span class="spacer"></span>
-    <button class="btn btn-primary" @onclick="() => _creating = !_creating">+ Nuevo tablero</button>
+    <button class="btn btn-primary" @onclick="ToggleCreate">+ Nuevo tablero</button>
 </div>
 
 @if (_creating)
@@ -15,7 +15,7 @@
     <form class="panel stack new-board" @onsubmit="CreateAsync">
         <label class="field">
             Nombre
-            <input class="input" @bind="_name" maxlength="100" required autofocus />
+            <input class="input" @bind="_name" maxlength="100" required @ref="_nameInput" />
         </label>
         <label class="field">
             Descripción <span class="muted small">(opcional)</span>
@@ -72,6 +72,8 @@ else
     private string _name = "";
     private string _description = "";
     private string? _error;
+    private ElementReference _nameInput;
+    private bool _focusPending;
 
     [Inject] private NavigationManager Nav { get; set; } = null!;
     [Inject] private IJSRuntime Js { get; set; } = null!;
@@ -86,6 +88,21 @@ else
         {
             _error = e.Message;
             _boards = [];
+        }
+    }
+
+    private void ToggleCreate()
+    {
+        _creating = !_creating;
+        _focusPending = _creating;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusPending)
+        {
+            _focusPending = false;
+            await _nameInput.FocusAsync();
         }
     }
 

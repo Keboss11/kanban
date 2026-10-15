@@ -1,0 +1,158 @@
+@page "/boards/{BoardId:guid}"
+@attribute [Authorize]
+@using Kanban.Web.Models
+@inject KanbanApiClient Api
+
+<PageTitle>@(_board?.Name ?? "Tablero") · Kanban</PageTitle>
+
+@if (_board is null)
+{
+    @if (_error is not null)
+    {
+        <div class="alert" role="alert">@_error</div>
+        <p><a href="">← Volver a mis tableros</a></p>
+    }
+    else
+    {
+        <p class="muted">Cargando tablero…</p>
+    }
+}
+else
+{
+    <div class="board-header">
+        <a class="btn btn-ghost btn-icon" href="" title="Mis tableros" aria-label="Volver a mis tableros">←</a>
+        <div class="board-title">
+            <h1>@_board.Name</h1>
+            @if (!string.IsNullOrEmpty(_board.Description))
+            {
+                <p class="muted small">@_board.Description</p>
+            }
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="alert board-alert" role="alert">
+            @_error
+            <button class="btn btn-ghost btn-icon" aria-label="Cerrar aviso" @onclick="() => _error = null">✕</button>
+        </div>
+    }
+
+    <div class="board-scroller">
+        @foreach (var column in _board.Columns)
+        {
+            <ColumnView @key="column.Id" Column="column" Columns="_board.Columns"
+                        OnOpenCard="OpenCard" OnMoveCard="MoveCardAsync" OnAddCard="AddCardAsync"
+                        OnUpdate="UpdateColumnAsync" OnDelete="DeleteColumnAsync" />
+        }
+
+        <section class="column column-new">
+            @if (_addingColumn)
+            {
+                <form class="stack" @onsubmit="AddColumnAsync">
+                    <input class="input" @bind="_newColumn" maxlength="50" placeholder="Nombre de la columna" required @ref="_newColumnInput" />
+                    <div class="row">
+                        <button class="btn btn-primary" type="submit">Añadir</button>
+                        <button class="btn btn-ghost" type="button" @onclick="() => _addingColumn = false">Cancelar</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <button class="btn btn-ghost add-card-toggle" @onclick="StartAddingColumn">+ Añadir columna</button>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid BoardId { get; set; }
+
+    private BoardState? _board;
+    private string? _error;
+    private CardDto? _openCard;
+    private bool _addingColumn;
+    private string _newColumn = "";
+    private ElementReference _newColumnInput;
+    private bool _focusNewColumn;
+
+    protected override Task OnParametersSetAsync() => ReloadAsync();
+
+    private async Task ReloadAsync()
+    {
+        try
+        {
+            _board = BoardState.From(await Api.GetBoardAsync(BoardId));
+        }
+        catch (ApiException e)
+        {
+            _error = e.Status == 404 ? "Este tablero no existe o no es tuyo." : e.Message;
+        }
+    }
+
+    /// <summary>Ejecuta una llamada a la API; si falla, muestra el error y recarga para deshacer el cambio optimista.</summary>
+    private async Task RunAsync(Func<Task> call)
+    {
+        try
+        {
+            await call();
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+            await ReloadAsync();
+        }
+    }
+
+    private void StartAddingColumn()
+    {
+        _addingColumn = true;
+        _focusNewColumn = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusNewColumn)
+        {
+            _focusNewColumn = false;
+            await _newColumnInput.FocusAsync();
+        }
+    }
+
+    private void OpenCard(CardDto card) => _openCard = card;
+
+    private Task MoveCardAsync((Guid CardId, Guid ColumnId, int Index) move) => RunAsync(async () =>
+    {
+        _board!.MoveCard(move.CardId, move.ColumnId, move.Index);
+        StateHasChanged();
+        var card = await Api.MoveCardAsync(_board.Id, move.CardId, move.ColumnId, move.Index);
+        _board.ReplaceCard(card);
+    });
+
+    private Task AddCardAsync((Guid ColumnId, string Title) add) => RunAsync(async () =>
+    {
+        var card = await Api.CreateCardAsync(_board!.Id, new CreateCardRequest(add.ColumnId, add.Title));
+        _board.Columns.First(c => c.Id == add.ColumnId).Cards.Add(card);
+    });
+
+    private Task UpdateColumnAsync((ColumnState Column, string Name, int? WipLimit) update) => RunAsync(async () =>
+    {
+        var column = await Api.UpdateColumnAsync(_board!.Id, update.Column.Id, new UpdateColumnRequest(update.Name, update.WipLimit));
+        update.Column.Name = column.Name;
+        update.Column.WipLimit = column.WipLimit;
+    });
+
+    private Task DeleteColumnAsync(ColumnState column) => RunAsync(async () =>
+    {
+        await Api.DeleteColumnAsync(_board!.Id, column.Id);
+        _board.Columns.Remove(column);
+    });
+
+    private Task AddColumnAsync() => RunAsync(async () =>
+    {
+        var column = await Api.AddColumnAsync(_board!.Id, new CreateColumnRequest(_newColumn));
+        _board.Columns.Add(ColumnState.From(column));
+        _newColumn = "";
+        _addingColumn = false;
+    });
+}
