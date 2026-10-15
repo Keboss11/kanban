@@ -2,7 +2,7 @@
 
 Tablero Kanban con tiempo real y un servidor **MCP** integrado, para que Claude pueda crear, mover y comentar tarjetas pasando por las mismas reglas que un usuario.
 
-> 🚧 En construcción. Fase actual: **F3 – Interfaz Blazor**.
+> 🚧 En construcción. Fase actual: **F4 – Tiempo real (SignalR)**.
 
 ## Stack
 
@@ -35,6 +35,8 @@ dotnet run --project src/Kanban.Api
 dotnet run --project src/Kanban.Web
 ```
 
+API en `http://localhost:5072` y web en `http://localhost:5071` (la URL de la API se configura en `src/Kanban.Web/wwwroot/appsettings.json`).
+
 En desarrollo la API crea `kanban.db` (SQLite), aplica las migraciones y siembra un usuario demo:
 `demo@kanban.local` / `Demo1234!`.
 
@@ -65,12 +67,22 @@ Los errores de validación se devuelven como `ProblemDetails` (400).
 | GET / POST | `/api/boards/{id}/cards/{cardId}/comments` | Comentarios |
 | GET | `/api/cards/search?text=&label=&priority=&boardId=` | Búsqueda en tus tableros |
 
+## Interfaz web
+
+Blazor WebAssembly con CSS propio (modo claro/oscuro, responsive) en lugar de una librería de componentes.
+
+- Login y registro con tokens bearer guardados en `localStorage` y renovados antes de caducar.
+- Tablero con columnas, límite WIP, tarjetas con prioridad, etiquetas y fecha límite.
+- **Arrastrar y soltar** con SortableJS (ratón y dedo) y menú **«Mover a…»** como alternativa accesible.
+- Modal de tarjeta con descripción en Markdown (sin HTML y solo enlaces seguros) y comentarios.
+- Historial del tablero: los cambios hechos por IA aparecen como «🤖 Claude …».
+
 ## Hoja de ruta
 
 - [x] F0 – Base: repositorio, solución, CI
 - [x] F1 – Dominio + base de datos
 - [x] F2 – API REST + autenticación
-- [ ] F3 – Interfaz Blazor
+- [x] F3 – Interfaz Blazor
 - [ ] F4 – Tiempo real (SignalR)
 - [ ] F5 – Servidor MCP
 - [ ] F6 – Despliegue
