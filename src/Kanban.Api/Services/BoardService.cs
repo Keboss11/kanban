@@ -48,6 +48,7 @@ public sealed class BoardService(BoardAccess access)
         var board = await access.LoadAsync(boardId, ct);
         _db.Boards.Remove(board);
         await access.SaveAsync(ct);
+        await access.NotifyDeletedAsync(boardId);
     }
 
     // ---- Columnas ----
