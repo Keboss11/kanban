@@ -51,6 +51,34 @@ public sealed class PersistenceTests : IDisposable
     }
 
     [Fact]
+    public async Task Adding_card_and_column_to_loaded_board_inserts_them()
+    {
+        // Regresión: con la clave generada por el dominio, EF tomaba la tarjeta nueva por existente (UPDATE en vez de INSERT).
+        var userId = await CreateUser();
+        var board = Board.CreateWithDefaultColumns(userId, "Proyecto");
+
+        await using (var db = _database.CreateContext())
+        {
+            db.Boards.Add(board);
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = _database.CreateContext())
+        {
+            var loaded = await LoadBoard(db, board.Id);
+            var column = loaded.AddColumn("Revisión");
+            loaded.AddCard(column.Id, "Nueva");
+            await db.SaveChangesAsync();
+        }
+
+        await using (var db = _database.CreateContext())
+        {
+            var loaded = await LoadBoard(db, board.Id);
+            Assert.Equal("Nueva", Assert.Single(loaded.Columns[3].Cards).Title);
+        }
+    }
+
+    [Fact]
     public async Task Moving_a_card_persists_new_column()
     {
         var userId = await CreateUser();
