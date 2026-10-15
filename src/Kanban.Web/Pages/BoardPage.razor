@@ -1,7 +1,9 @@
 @page "/boards/{BoardId:guid}"
 @attribute [Authorize]
 @using Kanban.Web.Models
+@implements IAsyncDisposable
 @inject KanbanApiClient Api
+@inject IJSRuntime Js
 
 <PageTitle>@(_board?.Name ?? "Tablero") · Kanban</PageTitle>
 
@@ -38,7 +40,7 @@ else
         </div>
     }
 
-    <div class="board-scroller">
+    <div class="board-scroller" @ref="_scroller">
         @foreach (var column in _board.Columns)
         {
             <ColumnView @key="column.Id" Column="column" Columns="_board.Columns"
@@ -116,6 +118,12 @@ else
         _focusNewColumn = true;
     }
 
+    // ---- Arrastrar y soltar ----
+    private ElementReference _scroller;
+    private IJSObjectReference? _dragModule;
+    private DotNetObjectReference<BoardPage>? _self;
+    private string? _sortableColumns;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_focusNewColumn)
@@ -123,6 +131,39 @@ else
             _focusNewColumn = false;
             await _newColumnInput.FocusAsync();
         }
+
+        // SortableJS se engancha a cada lista de tarjetas; se rehace solo si cambian las columnas.
+        var columns = _board is null ? null : string.Join(",", _board.Columns.Select(c => c.Id));
+        if (columns is not null && columns != _sortableColumns)
+        {
+            _sortableColumns = columns;
+            _dragModule ??= await Js.InvokeAsync<IJSObjectReference>("import", "./js/board.js");
+            _self ??= DotNetObjectReference.Create(this);
+            await _dragModule.InvokeVoidAsync("initBoard", _scroller, _self);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnCardDropped(string cardId, string columnId, int index)
+    {
+        await MoveCardAsync((Guid.Parse(cardId), Guid.Parse(columnId), index));
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_dragModule is not null)
+        {
+            try
+            {
+                await _dragModule.InvokeVoidAsync("disposeBoard", _scroller);
+                await _dragModule.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+        _self?.Dispose();
     }
 
     private void OpenCard(CardDto card) => _openCard = card;
