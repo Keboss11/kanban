@@ -2,11 +2,12 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Kanban.Shared.Boards;
+using Kanban.Shared.Realtime;
 
 namespace Kanban.Web.Services;
 
 /// <summary>Cliente tipado de la API REST. Los errores llegan como <see cref="ApiException"/> con mensaje legible.</summary>
-public sealed class KanbanApiClient(IHttpClientFactory httpFactory)
+public sealed class KanbanApiClient(IHttpClientFactory httpFactory, BoardRealtime realtime)
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -66,6 +67,9 @@ public sealed class KanbanApiClient(IHttpClientFactory httpFactory)
     private async Task<HttpResponseMessage> SendRawAsync(HttpMethod method, string url, object? body)
     {
         var request = new HttpRequestMessage(method, url);
+        // Esta pestaña ya aplica el cambio; la API no se lo reenviará por SignalR.
+        if (realtime.ConnectionId is { } connectionId)
+            request.Headers.Add(BoardHubContract.ConnectionIdHeader, connectionId);
         if (body is not null)
             request.Content = JsonContent.Create(body, body.GetType(), options: Json);
 

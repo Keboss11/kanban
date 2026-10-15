@@ -31,6 +31,10 @@ else
             }
         </div>
         <span class="spacer"></span>
+        <span class="live @(Realtime.IsLive ? "live-on" : "")"
+              title="@(Realtime.IsLive ? "Los cambios de otras pestañas y de Claude aparecen al momento" : "Sin conexión en tiempo real")">
+            ● @(Realtime.IsLive ? "En directo" : "Sin conexión")
+        </span>
         <button class="btn" aria-pressed="@(_showActivity ? "true" : "false")" @onclick="ToggleActivity">🕘 Actividad</button>
     </div>
 
@@ -68,6 +72,8 @@ else
         </section>
     </div>
 
+    <Toasts @ref="_toasts" />
+
     @if (_showActivity)
     {
         <ActivityPanel @ref="_activity" BoardId="_board.Id" OnClose="CloseActivity" />
@@ -91,7 +97,11 @@ else
     private ElementReference _newColumnInput;
     private bool _focusNewColumn;
 
-    protected override Task OnParametersSetAsync() => ReloadAsync();
+    protected override async Task OnParametersSetAsync()
+    {
+        await ReloadAsync();
+        _ = JoinRealtimeAsync();
+    }
 
     private async Task ReloadAsync()
     {
@@ -178,6 +188,7 @@ else
 
     public async ValueTask DisposeAsync()
     {
+        await DisposeRealtimeAsync();
         if (_dragModule is not null)
         {
             try

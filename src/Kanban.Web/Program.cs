@@ -17,6 +17,7 @@ builder.Services.AddSingleton<AuthService>();
 builder.Services.AddScoped<AuthenticationStateProvider, KanbanAuthStateProvider>();
 builder.Services.AddTransient<AuthHeaderHandler>();
 builder.Services.AddScoped<KanbanApiClient>();
+builder.Services.AddSingleton(sp => new BoardRealtime(sp.GetRequiredService<AuthService>(), apiBase));
 
 builder.Services.AddHttpClient(HttpClients.Auth, c => c.BaseAddress = apiBase);
 builder.Services.AddHttpClient(HttpClients.Api, c => c.BaseAddress = apiBase)

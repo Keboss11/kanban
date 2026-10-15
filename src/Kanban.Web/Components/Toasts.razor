@@ -1,0 +1,43 @@
+@implements IDisposable
+
+<div class="toasts" role="status" aria-live="polite">
+    @foreach (var toast in _toasts)
+    {
+        <div class="toast @(toast.Ai ? "toast-ai" : "")" @key="toast.Id">@toast.Text</div>
+    }
+</div>
+
+@code {
+    private static readonly TimeSpan Duration = TimeSpan.FromSeconds(4);
+    private const int MaxVisible = 4;
+
+    private readonly List<Toast> _toasts = [];
+    private readonly CancellationTokenSource _disposed = new();
+
+    public void Show(string text, bool ai = false)
+    {
+        var toast = new Toast(Guid.NewGuid(), text, ai);
+        _toasts.Add(toast);
+        if (_toasts.Count > MaxVisible)
+            _toasts.RemoveAt(0);
+        StateHasChanged();
+        _ = HideLaterAsync(toast);
+    }
+
+    private async Task HideLaterAsync(Toast toast)
+    {
+        try
+        {
+            await Task.Delay(Duration, _disposed.Token);
+            _toasts.Remove(toast);
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (TaskCanceledException)
+        {
+        }
+    }
+
+    public void Dispose() => _disposed.Cancel();
+
+    private sealed record Toast(Guid Id, string Text, bool Ai);
+}
