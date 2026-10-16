@@ -65,7 +65,8 @@ var mcpJson = new System.Text.Json.JsonSerializerOptions(ModelContextProtocol.Mc
 mcpJson.Converters.Add(new JsonStringEnumConverter());
 builder.Services.AddMcpServer(o => o.ServerInfo = new() { Name = "kanban", Version = "1.0.0" })
     .WithHttpTransport()
-    .WithTools<KanbanTools>(mcpJson);
+    .WithTools<KanbanTools>(mcpJson)
+    .WithPrompts<KanbanPrompts>(mcpJson);
 
 var app = builder.Build();
 

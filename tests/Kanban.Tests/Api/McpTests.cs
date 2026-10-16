@@ -168,4 +168,57 @@ public sealed class McpTests(KanbanApiFactory factory) : IClassFixture<KanbanApi
         await Assert.ThrowsAnyAsync<Exception>(() => ConnectAsync(token));
         await Assert.ThrowsAnyAsync<Exception>(() => ConnectAsync("kbn_inventado"));
     }
+
+    // ---- Prompts ----
+
+    private static string PromptText(GetPromptResult result) =>
+        string.Concat(result.Messages.Select(m => m.Content).OfType<TextContentBlock>().Select(c => c.Text));
+
+    [Fact]
+    public async Task Lists_prompts()
+    {
+        var (_, _, mcp) = await ArrangeAsync();
+        await using var _ = mcp;
+
+        var prompts = await mcp.ListPromptsAsync();
+
+        Assert.Equal(["planificar_feature", "resumen_estado"], prompts.Select(p => p.Name).Order());
+    }
+
+    [Fact]
+    public async Task Status_summary_includes_overdue_blocked_and_recent_progress()
+    {
+        var (user, board, mcp) = await ArrangeAsync();
+        await using var _ = mcp;
+        var (todo, done) = (board.Columns[0].Id, board.Columns[2].Id);
+        await user.PostJsonAsync($"/api/boards/{board.Id}/cards",
+            new CreateCardRequest(todo, "Factura atrasada", DueDate: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-3)));
+        await user.CreateCardAsync(board.Id, todo, "Esperando API externa", labels: ["Bloqueado"]);
+        var finished = await user.CreateCardAsync(board.Id, todo, "Login");
+        await user.PostJsonAsync($"/api/boards/{board.Id}/cards/{finished.Id}/move", new MoveCardRequest(done, 0));
+
+        var text = PromptText(await mcp.GetPromptAsync("resumen_estado", new Dictionary<string, object?> { ["boardId"] = board.Id.ToString() }));
+
+        Assert.Contains("«Factura atrasada» en Por hacer, vencía", text);
+        Assert.Contains("«Esperando API externa» en Por hacer", text);
+        Assert.Contains("movió «Login» a Hecho", text);
+        Assert.Contains("Bloqueado", text);
+    }
+
+    [Fact]
+    public async Task Plan_feature_mentions_idea_and_board()
+    {
+        var (_, board, mcp) = await ArrangeAsync();
+        await using var _ = mcp;
+
+        var text = PromptText(await mcp.GetPromptAsync("planificar_feature", new Dictionary<string, object?>
+        {
+            ["idea"] = "Exportar el tablero a CSV",
+            ["boardId"] = board.Id.ToString(),
+        }));
+
+        Assert.Contains("Exportar el tablero a CSV", text);
+        Assert.Contains("«Proyecto IA»", text);
+        Assert.Contains("create_card", text);
+    }
 }
