@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Kanban.Api.Auth;
 using Kanban.Api.Endpoints;
 using Kanban.Api.Errors;
+using Kanban.Api.Mcp;
 using Kanban.Api.Realtime;
 using Kanban.Api.Services;
 using Kanban.Infrastructure;
@@ -53,6 +54,19 @@ builder.Services.AddScoped<IBoardNotifier, SignalRBoardNotifier>();
 builder.Services.AddSignalR()
     .AddJsonProtocol(o => o.PayloadSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
+// MCP por HTTP (Streamable HTTP, sin estado). Usa los mismos servicios que la API REST.
+// Opciones del SDK + reflexión para nuestros DTOs, con enums como texto (Low, High…).
+var mcpJson = new System.Text.Json.JsonSerializerOptions(ModelContextProtocol.McpJsonUtilities.DefaultOptions)
+{
+    TypeInfoResolver = System.Text.Json.Serialization.Metadata.JsonTypeInfoResolver.Combine(
+        ModelContextProtocol.McpJsonUtilities.DefaultOptions.TypeInfoResolver,
+        new System.Text.Json.Serialization.Metadata.DefaultJsonTypeInfoResolver()),
+};
+mcpJson.Converters.Add(new JsonStringEnumConverter());
+builder.Services.AddMcpServer(o => o.ServerInfo = new() { Name = "kanban", Version = "1.0.0" })
+    .WithHttpTransport()
+    .WithTools<KanbanTools>(mcpJson);
+
 var app = builder.Build();
 
 await app.Services.InitializeDatabaseAsync(app.Configuration);
@@ -76,6 +90,7 @@ app.MapTokenEndpoints();
 app.MapBoardEndpoints();
 app.MapCardEndpoints();
 app.MapHub<BoardHub>(BoardHubContract.Path);
+app.MapMcp("/mcp").RequireAuthorization(PersonalAccessTokenHandler.SchemeName);
 
 app.Run();
 
