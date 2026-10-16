@@ -30,3 +30,30 @@ jobs:
         with:
           name: test-results
           path: "**/TestResults/*.trx"
+
+  # Los tests de la API otra vez, contra PostgreSQL real (el proveedor de producción).
+  test-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      KANBAN_TEST_POSTGRES: Host=localhost;Port=5432;Username=postgres;Password=postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Test (PostgreSQL)
+        run: dotnet test -c Release --filter "FullyQualifiedName~Kanban.Tests.Api"
