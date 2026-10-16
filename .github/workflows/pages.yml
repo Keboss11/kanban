@@ -1,0 +1,68 @@
+name: Web (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/Kanban.Web/**"
+      - "src/Kanban.Shared/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      API_URL: ${{ vars.API_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # Antes de publicar: el service worker verifica cada archivo con su hash, así que
+      # index.html y la configuración tienen que estar ya como se van a servir.
+      - name: Configurar para GitHub Pages
+        run: |
+          if [ -z "$API_URL" ]; then
+            echo "::error::Define la variable del repositorio API_URL (p. ej. https://kanban-api.onrender.com)."
+            exit 1
+          fi
+          REPO="${GITHUB_REPOSITORY#*/}"
+          sed -i "s|<base href=\"/\" />|<base href=\"/$REPO/\" />|" src/Kanban.Web/wwwroot/index.html
+          printf '{\n  "ApiBaseUrl": "%s"\n}\n' "$API_URL" > src/Kanban.Web/wwwroot/appsettings.Production.json
+          grep -q "<base href=\"/$REPO/\" />" src/Kanban.Web/wwwroot/index.html
+
+      - name: Publicar
+        run: dotnet publish src/Kanban.Web/Kanban.Web.csproj -c Release -o publish
+
+      # 404.html = index.html para que los enlaces directos (/kanban/boards/…) carguen la SPA;
+      # .nojekyll para que GitHub Pages sirva la carpeta _framework.
+      - name: Ajustes de GitHub Pages
+        run: |
+          cp publish/wwwroot/index.html publish/wwwroot/404.html
+          touch publish/wwwroot/.nojekyll
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

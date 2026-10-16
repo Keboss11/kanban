@@ -487,3 +487,6 @@ $RECYCLE.BIN/
 *.db
 *.db-shm
 *.db-wal
+
+# Lo genera el workflow de GitHub Pages con la URL de la API
+src/Kanban.Web/wwwroot/appsettings.Production.json
