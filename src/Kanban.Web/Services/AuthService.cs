@@ -68,12 +68,24 @@ public sealed class AuthService(IHttpClientFactory httpFactory, TokenStore store
             if (tokens.ExpiresAt - RefreshMargin > DateTimeOffset.UtcNow)
                 return tokens.AccessToken;
 
-            var response = await Http.PostAsJsonAsync("auth/refresh", new { refreshToken = tokens.RefreshToken });
-            if (!response.IsSuccessStatusCode)
+            HttpResponseMessage response;
+            try
             {
-                await LogoutAsync();
+                response = await Http.PostAsJsonAsync("auth/refresh", new { refreshToken = tokens.RefreshToken });
+            }
+            catch (HttpRequestException)
+            {
+                return null; // Sin conexión con la API: la sesión sigue, se reintentará en la próxima petición.
+            }
+
+            if (response.StatusCode is HttpStatusCode.BadRequest or HttpStatusCode.Unauthorized)
+            {
+                await LogoutAsync(); // El servidor rechaza el refresh token: la sesión ha terminado de verdad.
                 return null;
             }
+            if (!response.IsSuccessStatusCode)
+                return null; // 5xx (p. ej. la API reiniciándose o arrancando en frío): no cerrar sesión por un fallo temporal.
+
             return (await StoreAsync(response)).AccessToken;
         }
         finally
