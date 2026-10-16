@@ -120,6 +120,30 @@ así que basta con definirla y abrir Claude Code en la carpeta del proyecto.
 
 Los tokens personales solo sirven para `/mcp` (no para la API REST) y todo lo que se hace con ellos queda registrado como hecho por IA.
 
+## Despliegue (0 €)
+
+| Pieza | Dónde | Cómo |
+|---|---|---|
+| Base de datos | **Neon** (PostgreSQL) | Migraciones propias en `Kanban.Migrations.Postgres`; la API las aplica al arrancar |
+| API | **Render** (Docker, plan gratuito) | `Dockerfile` + `render.yaml` (Blueprint) |
+| Web | **GitHub Pages** | Workflow `pages.yml`: `base href` `/kanban/` y URL de la API antes de publicar |
+| Demo | GitHub Actions | `demo-reset.yml` reinicia la cuenta demo cada noche (03:00 UTC) |
+
+Decisiones relevantes:
+
+- **Claves de Data Protection en la base de datos**: el contenedor de Render es efímero y se duerme; con las claves en disco cada reinicio cerraría todas las sesiones.
+- **CI contra PostgreSQL**: los tests de la API se ejecutan también contra `postgres:17` (además de SQLite) y se construye la imagen Docker en cada push.
+- **Cuenta demo pública** (`demo@kanban.local` / `Demo1234!`): no puede cambiar su contraseña, email ni 2FA, y sus datos y tokens MCP se reinician cada noche.
+
+### Puesta en marcha
+
+1. **Neon**: crea un proyecto y copia la cadena de conexión (`postgresql://…?sslmode=require`).
+2. **Render**: *New → Blueprint* con este repositorio. Pega la cadena de Neon en `ConnectionStrings__Kanban`.
+3. **GitHub** (*Settings → Secrets and variables → Actions*):
+   - variable `API_URL` = URL del servicio de Render (p. ej. `https://kanban-api.onrender.com`);
+   - secreto `DEMO_RESET_KEY` = valor de `Demo__ResetKey` que generó Render.
+4. **GitHub Pages**: *Settings → Pages → Source: GitHub Actions* y relanza el workflow *Web (GitHub Pages)*.
+
 ## Hoja de ruta
 
 - [x] F0 – Base: repositorio, solución, CI

@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       API_URL: ${{ vars.API_URL }}
+    outputs:
+      configured: ${{ steps.config.outputs.configured }}
     steps:
       - uses: actions/checkout@v4
 
@@ -33,32 +35,39 @@ jobs:
       # Antes de publicar: el service worker verifica cada archivo con su hash, así que
       # index.html y la configuración tienen que estar ya como se van a servir.
       - name: Configurar para GitHub Pages
+        id: config
         run: |
           if [ -z "$API_URL" ]; then
-            echo "::error::Define la variable del repositorio API_URL (p. ej. https://kanban-api.onrender.com)."
-            exit 1
+            echo "::warning::Sin la variable del repositorio API_URL (p. ej. https://kanban-api.onrender.com) no se despliega la web."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
           REPO="${GITHUB_REPOSITORY#*/}"
           sed -i "s|<base href=\"/\" />|<base href=\"/$REPO/\" />|" src/Kanban.Web/wwwroot/index.html
           printf '{\n  "ApiBaseUrl": "%s"\n}\n' "$API_URL" > src/Kanban.Web/wwwroot/appsettings.Production.json
           grep -q "<base href=\"/$REPO/\" />" src/Kanban.Web/wwwroot/index.html
 
       - name: Publicar
+        if: steps.config.outputs.configured == 'true'
         run: dotnet publish src/Kanban.Web/Kanban.Web.csproj -c Release -o publish
 
       # 404.html = index.html para que los enlaces directos (/kanban/boards/…) carguen la SPA;
       # .nojekyll para que GitHub Pages sirva la carpeta _framework.
       - name: Ajustes de GitHub Pages
+        if: steps.config.outputs.configured == 'true'
         run: |
           cp publish/wwwroot/index.html publish/wwwroot/404.html
           touch publish/wwwroot/.nojekyll
 
       - uses: actions/upload-pages-artifact@v3
+        if: steps.config.outputs.configured == 'true'
         with:
           path: publish/wwwroot
 
   deploy:
     needs: build
+    if: needs.build.outputs.configured == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
