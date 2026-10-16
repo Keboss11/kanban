@@ -1,0 +1,26 @@
+name: Reiniciar demo
+
+# Cada noche deja la cuenta demo como nueva. Lo hace GitHub y no la propia API porque
+# en Render el plan gratuito duerme y un temporizador interno no se dispararía.
+on:
+  schedule:
+    - cron: "0 3 * * *" # 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  reset:
+    runs-on: ubuntu-latest
+    env:
+      API_URL: ${{ vars.API_URL }}
+      DEMO_RESET_KEY: ${{ secrets.DEMO_RESET_KEY }}
+    steps:
+      - name: Reiniciar
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$DEMO_RESET_KEY" ]; then
+            echo "Falta la variable API_URL o el secreto DEMO_RESET_KEY; nada que hacer."
+            exit 0
+          fi
+          # La primera petición despierta el servicio si estaba dormido.
+          curl -fsS --retry 5 --retry-delay 20 --retry-all-errors --max-time 90 "$API_URL/health"
+          curl -fsS --max-time 90 -X POST "$API_URL/admin/demo/reset" -H "X-Demo-Reset-Key: $DEMO_RESET_KEY"
+          echo "Demo reiniciada."

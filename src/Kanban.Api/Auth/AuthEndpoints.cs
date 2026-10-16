@@ -12,7 +12,7 @@ public static class AuthEndpoints
     /// </summary>
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
-        var auth = app.MapGroup("/auth").WithTags("Auth");
+        var auth = app.MapGroup("/auth").WithTags("Auth").ProtectDemoAccount();
         auth.MapIdentityApi<ApplicationUser>();
 
         auth.MapGet("/me", async (ICurrentUser current, UserManager<ApplicationUser> users) =>

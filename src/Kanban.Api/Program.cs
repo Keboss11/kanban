@@ -106,6 +106,7 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
 app.MapTokenEndpoints();
+app.MapDemoEndpoints();
 app.MapBoardEndpoints();
 app.MapCardEndpoints();
 app.MapHub<BoardHub>(BoardHubContract.Path);

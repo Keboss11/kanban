@@ -38,8 +38,26 @@ public sealed class DemoDataSeeder(KanbanDbContext db, UserManager<ApplicationUs
             await db.Boards.Where(b => b.OwnerId == user.Id).ExecuteDeleteAsync(ct);
             // La cuenta demo es pública: nadie debe dejar un token MCP que sobreviva al reinicio.
             await db.PersonalAccessTokens.Where(t => t.UserId == user.Id).ExecuteDeleteAsync(ct);
+            await RestoreCredentialsAsync(user, demoPassword);
         }
         await SeedAsync(demoPassword, ct);
+    }
+
+    /// <summary>
+    /// Deja la contraseña y el nombre como al principio. La API ya impide modificar la cuenta demo;
+    /// esto es la red de seguridad. Cambiar la contraseña renueva el security stamp, así que las
+    /// sesiones de los visitantes no podrán renovarse y empezarán de cero con el tablero recién creado.
+    /// </summary>
+    private async Task RestoreCredentialsAsync(ApplicationUser user, string password)
+    {
+        user.DisplayName = "Demo";
+        user.LockoutEnd = null;
+        user.AccessFailedCount = 0;
+        await users.RemovePasswordAsync(user);
+        var result = await users.AddPasswordAsync(user, password);
+        if (!result.Succeeded)
+            throw new InvalidOperationException(
+                "No se pudo restablecer la contraseña demo: " + string.Join("; ", result.Errors.Select(e => e.Description)));
     }
 
     private async Task<ApplicationUser> EnsureDemoUserAsync(string password)
