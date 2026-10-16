@@ -11,8 +11,9 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString("Kanban") ?? "Data Source=kanban.db";
+        var provider = configuration["Database:Provider"] ?? DatabaseProvider.Sqlite;
 
-        services.AddDbContext<KanbanDbContext>(options => options.UseSqlite(connectionString));
+        services.AddDbContext<KanbanDbContext>(options => DatabaseProvider.Configure(options, provider, connectionString));
         services.AddScoped<DemoDataSeeder>();
 
         return services;
