@@ -10,6 +10,7 @@ using Kanban.Infrastructure.Identity;
 using Kanban.Infrastructure.Persistence;
 using Kanban.Shared.Realtime;
 using Microsoft.AspNetCore.Authentication.BearerToken;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,9 @@ builder.Services.AddExceptionHandler<KanbanExceptionHandler>();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddDataProtection()
+    .SetApplicationName("Kanban")
+    .PersistKeysToDbContext<KanbanDbContext>();
 
 // La web (Blazor WASM) se sirve desde otro origen; sin cookies, así que no hace falta AllowCredentials.
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];

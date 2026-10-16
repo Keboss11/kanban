@@ -1,6 +1,7 @@
 using Kanban.Domain.Activity;
 using Kanban.Domain.Boards;
 using Kanban.Infrastructure.Identity;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Kanban.Infrastructure.Persistence;
 
 public sealed class KanbanDbContext(DbContextOptions<KanbanDbContext> options)
-    : IdentityDbContext<ApplicationUser>(options)
+    : IdentityDbContext<ApplicationUser>(options), IDataProtectionKeyContext
 {
     public DbSet<Board> Boards => Set<Board>();
     public DbSet<Column> Columns => Set<Column>();
@@ -16,6 +17,12 @@ public sealed class KanbanDbContext(DbContextOptions<KanbanDbContext> options)
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
+
+    /// <summary>
+    /// Claves que firman los tokens bearer. En la base de datos y no en disco: el contenedor de producción
+    /// se reinicia (y se duerme) a menudo y, si se perdieran, se cerraría la sesión de todos los usuarios.
+    /// </summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
