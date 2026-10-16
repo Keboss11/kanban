@@ -14,6 +14,7 @@
                 <span class="user-email" title="@context.User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value">
                     @context.User.Identity?.Name
                 </span>
+                <a class="btn btn-ghost btn-icon" href="settings" title="Ajustes" aria-label="Ajustes">⚙</a>
                 <button class="btn btn-ghost" @onclick="LogoutAsync">Salir</button>
             </Authorized>
         </AuthorizeView>

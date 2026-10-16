@@ -267,3 +267,18 @@ label.field { display: flex; flex-direction: column; gap: .3rem; font-weight: 50
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { .toast { animation: none; } }
 @media (max-width: 600px) { .live { display: none; } }
+
+/* ---- Ajustes ---- */
+.settings { max-width: 720px; }
+.settings h1 { margin: 0; }
+.settings h2 { margin: 0; }
+.token-name { flex: 1; min-width: 200px; width: auto; }
+.token-created { padding: .8rem; border-radius: 8px; background: var(--accent-soft); }
+.copy-row { display: flex; gap: .5rem; align-items: center; }
+.secret {
+    flex: 1; min-width: 0; padding: .45rem .6rem; border-radius: 6px; background: var(--surface);
+    font-size: .8rem; overflow-x: auto; white-space: nowrap; user-select: all;
+}
+.token-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
+.token-list li { display: flex; align-items: center; gap: .5rem; justify-content: space-between; padding: .5rem .6rem; border-radius: 8px; background: var(--surface-2); }
+.stack-tight { display: flex; flex-direction: column; gap: .1rem; min-width: 0; }

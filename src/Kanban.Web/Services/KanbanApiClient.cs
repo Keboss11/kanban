@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Kanban.Shared.Auth;
 using Kanban.Shared.Boards;
 using Kanban.Shared.Realtime;
 
@@ -49,6 +50,15 @@ public sealed class KanbanApiClient(IHttpClientFactory httpFactory, BoardRealtim
         GetAsync<List<CommentDto>>($"api/boards/{boardId}/cards/{cardId}/comments");
     public Task<CommentDto> AddCommentAsync(Guid boardId, Guid cardId, string text) =>
         SendAsync<CommentDto>(HttpMethod.Post, $"api/boards/{boardId}/cards/{cardId}/comments", new CreateCommentRequest(text));
+
+    // ---- Tokens personales (MCP) ----
+    public Task<List<PersonalAccessTokenDto>> GetTokensAsync() => GetAsync<List<PersonalAccessTokenDto>>("api/tokens");
+    public Task<CreatedTokenDto> CreateTokenAsync(string name) =>
+        SendAsync<CreatedTokenDto>(HttpMethod.Post, "api/tokens", new CreateTokenRequest(name));
+    public Task DeleteTokenAsync(Guid id) => SendAsync(HttpMethod.Delete, $"api/tokens/{id}");
+
+    /// <summary>URL del endpoint MCP de esta API.</summary>
+    public Uri McpUrl => new(httpFactory.CreateClient(HttpClients.Api).BaseAddress!, "mcp");
 
     // ---- Infraestructura ----
     private Task<T> GetAsync<T>(string url) => SendAsync<T>(HttpMethod.Get, url, null);

@@ -1,0 +1,153 @@
+@page "/settings"
+@attribute [Authorize]
+@using Kanban.Shared.Auth
+@inject KanbanApiClient Api
+@inject IJSRuntime Js
+
+<PageTitle>Ajustes · Kanban</PageTitle>
+
+<div class="settings stack">
+    <div class="row">
+        <a class="btn btn-ghost btn-icon" href="" aria-label="Volver a mis tableros">←</a>
+        <h1>Ajustes</h1>
+    </div>
+
+    <section class="panel stack">
+        <h2>Conectar con Claude (MCP)</h2>
+        <p class="muted small">
+            Crea un token personal para que Claude Code o Claude Desktop gestionen tus tableros.
+            Todo lo que haga Claude aparecerá en el historial como «🤖 Claude».
+        </p>
+
+        <form class="row" @onsubmit="CreateAsync">
+            <input class="input token-name" @bind="_name" maxlength="60" placeholder="Nombre (p. ej. Claude Code en mi portátil)"
+                   aria-label="Nombre del token" required />
+            <button class="btn btn-primary" type="submit" disabled="@_busy">Crear token</button>
+        </form>
+
+        @if (_error is not null)
+        {
+            <div class="alert" role="alert">@_error</div>
+        }
+
+        @if (_created is not null)
+        {
+            <div class="token-created stack" role="status">
+                <strong>Copia el token ahora: no se volverá a mostrar.</strong>
+                <div class="copy-row">
+                    <code class="secret">@_created.Value</code>
+                    <button class="btn" @onclick="() => CopyAsync(_created.Value, 0)">@(_copied == 0 ? "¡Copiado!" : "Copiar")</button>
+                </div>
+                <span class="small">Para añadirlo a Claude Code, ejecuta en tu terminal:</span>
+                <div class="copy-row">
+                    <code class="secret">@ClaudeCommand(_created.Value)</code>
+                    <button class="btn" @onclick="() => CopyAsync(ClaudeCommand(_created.Value), 1)">@(_copied == 1 ? "¡Copiado!" : "Copiar")</button>
+                </div>
+                <button class="btn btn-ghost" @onclick="() => _created = null">Hecho</button>
+            </div>
+        }
+
+        @if (_tokens is null)
+        {
+            <p class="muted small">Cargando…</p>
+        }
+        else if (_tokens.Count == 0)
+        {
+            <p class="muted small">No tienes tokens.</p>
+        }
+        else
+        {
+            <ul class="token-list">
+                @foreach (var token in _tokens)
+                {
+                    <li @key="token.Id">
+                        <div class="stack-tight">
+                            <strong>@token.Name</strong>
+                            <span class="muted small">
+                                <code>@token.Prefix…</code> · creado @Format.Relative(token.CreatedAt)
+                                · @(token.LastUsedAt is { } used ? $"usado {Format.Relative(used)}" : "sin usar")
+                            </span>
+                        </div>
+                        <button class="btn btn-ghost btn-danger" @onclick="() => RevokeAsync(token)">Revocar</button>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>
+
+@code {
+    private List<PersonalAccessTokenDto>? _tokens;
+    private CreatedTokenDto? _created;
+    private string _name = "";
+    private string? _error;
+    private bool _busy;
+    private int? _copied;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _tokens = await Api.GetTokensAsync();
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+            _tokens = [];
+        }
+    }
+
+    private string ClaudeCommand(string token) =>
+        $"claude mcp add --transport http kanban {Api.McpUrl} --header \"Authorization: Bearer {token}\"";
+
+    private async Task CreateAsync()
+    {
+        _busy = true;
+        _error = null;
+        _copied = null;
+        try
+        {
+            _created = await Api.CreateTokenAsync(_name);
+            _tokens!.Insert(0, _created.Token);
+            _name = "";
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private async Task RevokeAsync(PersonalAccessTokenDto token)
+    {
+        if (!await Js.InvokeAsync<bool>("confirm", $"¿Revocar «{token.Name}»? Los clientes que lo usen dejarán de funcionar."))
+            return;
+        try
+        {
+            await Api.DeleteTokenAsync(token.Id);
+            _tokens!.Remove(token);
+            if (_created?.Token.Id == token.Id)
+                _created = null;
+        }
+        catch (ApiException e)
+        {
+            _error = e.Message;
+        }
+    }
+
+    private async Task CopyAsync(string text, int which)
+    {
+        try
+        {
+            await Js.InvokeVoidAsync("navigator.clipboard.writeText", text);
+            _copied = which;
+        }
+        catch (JSException)
+        {
+            _error = "No se pudo copiar; selecciona el texto y cópialo a mano.";
+        }
+    }
+}
