@@ -36,6 +36,8 @@ public sealed class DemoDataSeeder(KanbanDbContext db, UserManager<ApplicationUs
             await db.Comments.Where(c => c.AuthorId == user.Id).ExecuteDeleteAsync(ct);
             await db.ActivityLogs.Where(a => a.UserId == user.Id).ExecuteDeleteAsync(ct);
             await db.Boards.Where(b => b.OwnerId == user.Id).ExecuteDeleteAsync(ct);
+            // La cuenta demo es pública: nadie debe dejar un token MCP que sobreviva al reinicio.
+            await db.PersonalAccessTokens.Where(t => t.UserId == user.Id).ExecuteDeleteAsync(ct);
         }
         await SeedAsync(demoPassword, ct);
     }

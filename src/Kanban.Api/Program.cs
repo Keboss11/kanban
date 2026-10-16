@@ -24,7 +24,13 @@ builder.Services.AddInfrastructure(builder.Configuration);
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod()));
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(o =>
+    // El endpoint MCP solo acepta tokens personales: así todo lo que hace la IA queda identificado como tal.
+    o.AddPolicy(PersonalAccessTokenHandler.SchemeName, p => p
+        .AddAuthenticationSchemes(PersonalAccessTokenHandler.SchemeName)
+        .RequireAuthenticatedUser()));
+builder.Services.AddAuthentication()
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, PersonalAccessTokenHandler>(PersonalAccessTokenHandler.SchemeName, null);
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>(o => o.User.RequireUniqueEmail = true)
     .AddEntityFrameworkStores<KanbanDbContext>()
     .AddErrorDescriber<SpanishIdentityErrorDescriber>();
@@ -66,6 +72,7 @@ app.UseAuthorization();
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapAuthEndpoints();
+app.MapTokenEndpoints();
 app.MapBoardEndpoints();
 app.MapCardEndpoints();
 app.MapHub<BoardHub>(BoardHubContract.Path);

@@ -20,7 +20,6 @@ namespace Kanban.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Kanban.Domain.Activity.ActivityLog", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Action")
@@ -63,7 +62,6 @@ namespace Kanban.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Kanban.Domain.Boards.Board", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -92,7 +90,6 @@ namespace Kanban.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Kanban.Domain.Boards.Card", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("ColumnId")
@@ -138,7 +135,6 @@ namespace Kanban.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Kanban.Domain.Boards.Column", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("BoardId")
@@ -165,7 +161,6 @@ namespace Kanban.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("Kanban.Domain.Boards.Comment", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("AuthorId")
@@ -257,6 +252,46 @@ namespace Kanban.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("UserNameIndex");
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Kanban.Infrastructure.Identity.PersonalAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayPrefix")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastUsedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PersonalAccessTokens");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -440,6 +475,15 @@ namespace Kanban.Infrastructure.Persistence.Migrations
                     b.HasOne("Kanban.Domain.Boards.Card", null)
                         .WithMany()
                         .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Kanban.Infrastructure.Identity.PersonalAccessToken", b =>
+                {
+                    b.HasOne("Kanban.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });

@@ -15,6 +15,7 @@ public sealed class KanbanDbContext(DbContextOptions<KanbanDbContext> options)
     public DbSet<Card> Cards => Set<Card>();
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+    public DbSet<PersonalAccessToken> PersonalAccessTokens => Set<PersonalAccessToken>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
