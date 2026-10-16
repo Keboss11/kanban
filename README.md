@@ -2,7 +2,7 @@
 
 Tablero Kanban con tiempo real y un servidor **MCP** integrado, para que Claude pueda crear, mover y comentar tarjetas pasando por las mismas reglas que un usuario.
 
-> 🚧 En construcción. Fase actual: **F5 – Servidor MCP**.
+> 🚧 En construcción. Fase actual: **F6 – Despliegue**.
 
 ## Stack
 
@@ -87,6 +87,39 @@ así que cualquier cambio, venga de la web o de Claude vía MCP, aparece al mome
 - Cada petición de la web incluye `X-SignalR-Connection`; esa pestaña no recibe el eco de su propio cambio.
 - Al reconectar, el cliente vuelve a unirse al grupo y recarga el tablero.
 
+## Servidor MCP
+
+La propia API expone un endpoint **MCP** en `/mcp` (SDK oficial `ModelContextProtocol.AspNetCore`, Streamable HTTP, sin estado).
+Las herramientas llaman a **los mismos servicios** que la web: mismas validaciones, mismo control de acceso, mismo historial
+(marcado como «🤖 Claude») y mismos avisos en tiempo real.
+
+| Herramienta | Qué hace |
+|---|---|
+| `list_boards` | Tableros del usuario |
+| `get_board` | Columnas y tarjetas de un tablero |
+| `create_board` | Crear un tablero con columnas por defecto |
+| `create_card` / `update_card` / `delete_card` | CRUD de tarjetas (`update_card` solo cambia lo indicado) |
+| `move_card` | Cambiar de columna (por nombre o id) o de posición |
+| `add_comment` | Comentar una tarjeta |
+| `search_cards` | Buscar por texto, etiqueta o prioridad |
+
+Prompts: **`planificar_feature`** (divide una idea en tarjetas y las crea tras confirmarlo) y
+**`resumen_estado`** (bloqueadas, vencidas y avances de la semana, calculados en el servidor).
+
+### Conectarlo a Claude Code
+
+1. En la web, **Ajustes → Crear token** (se muestra una sola vez; en la base de datos solo se guarda su hash).
+2. Copia el comando que aparece, o añádelo a mano:
+
+```bash
+claude mcp add --transport http kanban http://localhost:5072/mcp --header "Authorization: Bearer kbn_..."
+```
+
+Este repositorio incluye un `.mcp.json` que lee el token de la variable de entorno `KANBAN_MCP_TOKEN`,
+así que basta con definirla y abrir Claude Code en la carpeta del proyecto.
+
+Los tokens personales solo sirven para `/mcp` (no para la API REST) y todo lo que se hace con ellos queda registrado como hecho por IA.
+
 ## Hoja de ruta
 
 - [x] F0 – Base: repositorio, solución, CI
@@ -94,7 +127,7 @@ así que cualquier cambio, venga de la web o de Claude vía MCP, aparece al mome
 - [x] F2 – API REST + autenticación
 - [x] F3 – Interfaz Blazor
 - [x] F4 – Tiempo real (SignalR)
-- [ ] F5 – Servidor MCP
+- [x] F5 – Servidor MCP
 - [ ] F6 – Despliegue
 - [ ] F7 – PWA + móvil
 - [ ] F8 – OAuth para el MCP

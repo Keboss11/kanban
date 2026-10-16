@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "kanban": {
+      "type": "http",
+      "url": "http://localhost:5072/mcp",
+      "headers": {
+        "Authorization": "Bearer ${KANBAN_MCP_TOKEN:-}"
+      }
+    }
+  }
+}
