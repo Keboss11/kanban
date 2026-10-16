@@ -8,6 +8,10 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+// En producción, solo avisos y errores en la consola del navegador (no cada petición HTTP).
+if (!builder.HostEnvironment.IsDevelopment())
+    builder.Logging.SetMinimumLevel(LogLevel.Warning);
+
 var apiBase = new Uri(builder.Configuration["ApiBaseUrl"] ?? builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddAuthorizationCore();
