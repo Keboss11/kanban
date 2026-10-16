@@ -1,0 +1,24 @@
+# Blueprint de Render: API en Docker (plan gratuito). La web va aparte, en GitHub Pages.
+# Render → New → Blueprint → este repositorio.
+services:
+  - type: web
+    name: kanban-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      # Cadena de conexión de Neon (postgresql://…?sslmode=require). Se pega a mano en Render.
+      - key: ConnectionStrings__Kanban
+        sync: false
+      # Origen de la web en GitHub Pages (sin ruta).
+      - key: Cors__AllowedOrigins__0
+        value: https://keboss11.github.io
+      # Contraseña de la cuenta demo: pública a propósito, la web la muestra en «Probar con la cuenta demo».
+      - key: Seed__DemoPassword
+        value: Demo1234!
+      # Clave para POST /admin/demo/reset. Cópiala al secreto DEMO_RESET_KEY del repositorio en GitHub.
+      - key: Demo__ResetKey
+        generateValue: true
