@@ -1,0 +1,11 @@
+**/bin/
+**/obj/
+**/*.db
+**/*.db-*
+.git/
+.github/
+.vs/
+.vscode/
+.claude/
+tests/
+src/Kanban.Web/

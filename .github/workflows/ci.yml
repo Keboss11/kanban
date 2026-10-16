@@ -57,3 +57,17 @@ jobs:
 
       - name: Test (PostgreSQL)
         run: dotnet test -c Release --filter "FullyQualifiedName~Kanban.Tests.Api"
+
+  # La imagen de la API que se despliega en Render debe construir.
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t kanban-api .
+      - name: Smoke test
+        run: |
+          docker run -d --name api -p 8080:8080 \
+            -e Database__Provider=Sqlite -e ConnectionStrings__Kanban="Data Source=/tmp/kanban.db" kanban-api
+          for i in $(seq 1 30); do curl -sf localhost:8080/health && exit 0; sleep 1; done
+          docker logs api; exit 1

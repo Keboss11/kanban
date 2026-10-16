@@ -11,9 +11,22 @@ using Kanban.Infrastructure.Persistence;
 using Kanban.Shared.Realtime;
 using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Render (y otros PaaS) indican en PORT dónde escuchar.
+if (Environment.GetEnvironmentVariable("PORT") is { Length: > 0 } port)
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+// Detrás del proxy de la plataforma, que termina el TLS: respetar el esquema y la IP originales.
+builder.Services.Configure<ForwardedHeadersOptions>(o =>
+{
+    o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    o.KnownNetworks.Clear();
+    o.KnownProxies.Clear();
+});
 
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
@@ -76,6 +89,7 @@ var app = builder.Build();
 
 await app.Services.InitializeDatabaseAsync(app.Configuration);
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 
